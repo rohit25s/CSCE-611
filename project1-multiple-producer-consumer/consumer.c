@@ -7,8 +7,8 @@ extern sem_t* empty;
 extern sem_t* mqAccess;
 
 mqd_t mq;
-	// mqueue attributes
-	struct mq_attr attr;
+// mqueue attributes
+struct mq_attr attr;
 	
 
 void sendRequestMessage(int myID)
@@ -29,24 +29,20 @@ void sendRequestMessage(int myID)
 
 void *consume(void *a)
 {
-	attr.mq_flags = 0;
-	attr.mq_maxmsg = 50;
-	attr.mq_msgsize = 1000;
-	attr.mq_curmsgs = 0;
+	mq_getattr(mq, &attr);
 	
 	// message queue buffer to store incoming and outgoing messages
 	
 	// open the queue and create it if doesn't exist
 
-	printf("Open mqueue consumer %s\n", MQUEUE);
+	// printf("Open mqueue consumer %s\n", MQUEUE);
 	if ((mq = mq_open(MQUEUE, O_RDWR)) == -1)
 	{
 		perror("open queue consumer error");
 		exit(EXIT_FAILURE);
 	}
 
-	printf("queue open consumer\n");
-	usleep(1000);
+	// printf("queue open consumer\n");
 
 	bool canConsume = false;
 	int terminate = 3;
@@ -82,7 +78,7 @@ void *consume(void *a)
 				if(mes.status == 1)
 				{
 					pthread_mutex_unlock(&mutex);
-					printf("[Consumer %i] data consumed = %d\n",myID, mes.data);
+					printf("[Consumer %i] Data consumed = %d\n",myID, mes.data);
 					canConsume = !canConsume;
 					terminate--;
 					if(terminate<=0)
@@ -103,7 +99,7 @@ void *consume(void *a)
 			sendRequestMessage(myID);
 			canConsume = !canConsume;
 		}
-		usleep(SLEEP_TIME_MICRO);
+		usleep(50);
 	}
 	printf("\nconsumer %d exiting.\n", myID);
 	//close(fd);
@@ -116,15 +112,16 @@ void start_consumer()
 
 	int i=0;
 	int a[NUM_CONSUMERS];
-	pthread_t consumer_thread[NUM_CONSUMERS];
+	pthread_t cthread[NUM_CONSUMERS];
 	for(i=0;i<NUM_CONSUMERS;i++)
 	{
 		a[i] = i+1;
-		pthread_create(&consumer_thread[i], NULL, (void *)consume, (void *)&a[i]);
+		printf("[Consumer %d] created\n", a[i]);
+		pthread_create(&cthread[i], NULL, (void *)consume, (void *)&a[i]);
 	}
 	for(i=0;i<NUM_CONSUMERS;i++)
 	{
-		pthread_join(consumer_thread[i], NULL);
+		pthread_join(cthread[i], NULL);
 	}
 
 	struct message mes;

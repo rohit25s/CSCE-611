@@ -1,5 +1,5 @@
 /*
-Name - Rohit Sah
+Name - Rohit Kumar Sah
 UIN: 831000250
 People I collaborated with: Abhishek Sinha, Shubham Gupta, Rohan Chaudhury
 */
@@ -31,12 +31,12 @@ int main()
 	static struct mq_attr attr;
 	memset(&attr, 0x00, sizeof(struct mq_attr));
 	attr.mq_flags = 0;
-	attr.mq_maxmsg = 50;
-	attr.mq_msgsize = 1024;
+	attr.mq_maxmsg = 10;
+	attr.mq_msgsize = MAX_SIZE;
 	attr.mq_curmsgs = 0;
 
 	printf("Create message queue for communication\n");
-	mq = mq_open(MQUEUE, O_CREAT | O_EXCL, S_IRUSR | S_IWUSR, NULL);
+	mq = mq_open(MQUEUE, O_CREAT | O_EXCL, S_IRUSR | S_IWUSR, &attr);
 
 	if (mq == (mqd_t) -1)
     {

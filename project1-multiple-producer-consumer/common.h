@@ -2,12 +2,10 @@
 #define COMMON_H_
 
 #define BUF_SIZE 10
-#define NUM_PRODUCERS 5
+#define NUM_PRODUCERS 15
 #define NUM_CONSUMERS 10
-#define NAMED_PIPE "./foo"
 #define MQUEUE "/bar3"
-#define MAX_SIZE 1000
-#define SLEEP_TIME_MICRO 50
+#define MAX_SIZE 8192
 #define SEM_FULL "/full"
 #define SEM_EMPTY "/empty"
 #define SEM_MQ_ACCESS "/mqAccess"

@@ -14,11 +14,7 @@ struct mq_attr attr;
 
 void *produce(void *a)
 {
-
-	attr.mq_flags = 0;
-	attr.mq_maxmsg = 50;
-	attr.mq_msgsize = 8192;
-	attr.mq_curmsgs = 0;
+	mq_getattr(mq, &attr);
 
 	// signal interrupt
 	int sig;
@@ -26,13 +22,13 @@ void *produce(void *a)
 	struct sigevent event;
 
 	// open the queue and create it if doesn't exist
-	printf("Open mqueue producer %s\n", MQUEUE);
+	// printf("Open mqueue producer %s\n", MQUEUE);
 	if ((mq = mq_open(MQUEUE, O_RDWR)) == -1)
 	{
 		perror("open queue producer error");
 		exit(EXIT_FAILURE);
 	}
-	printf("queue opened producer\n");
+	// printf("queue opened producer\n");
 	
 	int myID = *((int *)a);
 
@@ -81,7 +77,7 @@ void *produce(void *a)
 			sem_post(full);
 			pthread_mutex_unlock(&mutex);
 		}
-		usleep(10);
+		usleep(50);
 	}
 	return NULL;
 }
@@ -91,16 +87,17 @@ void start_producer()
 
 	int i=0;
 	int a[NUM_PRODUCERS];
-	pthread_t producer_thread[NUM_PRODUCERS];
+	pthread_t prthread[NUM_PRODUCERS];
 	
 	for(i=0;i<NUM_PRODUCERS;i++)
 	{
 		a[i] = i+1;
-		pthread_create(&producer_thread[i], NULL, (void *)produce, (void *)&a[i]);
+		printf("[Producer %d] created\n", a[i]);
+		pthread_create(&prthread[i], NULL, (void *)produce, (void *)&a[i]);
 	}
 	for(i=0;i<NUM_PRODUCERS;i++)
 	{
-		pthread_join(producer_thread[i], NULL);
+		pthread_join(prthread[i], NULL);
 	}
 	printf("\nProducer done Producing. Exiting.\n");
 	mq_close(mq);
