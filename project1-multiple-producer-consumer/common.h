@@ -5,7 +5,7 @@
 #define NUM_PRODUCERS 5
 #define NUM_CONSUMERS 10
 #define NAMED_PIPE "./foo"
-#define MQUEUE "/bar2"
+#define MQUEUE "/bar3"
 #define MAX_SIZE 1000
 #define SLEEP_TIME_MICRO 50
 #define SEM_FULL "/full"
@@ -25,9 +25,10 @@
 #include <mqueue.h>
 #include "message.h"
 #include <semaphore.h>
+#include <string.h>
 
 void start_consumer();
 void start_producer();
-void *ResourceGenerator(void *a);
-void *ResourceRequester(void *a);
+void *consume(void *a);
+void *produce(void *a);
 #endif

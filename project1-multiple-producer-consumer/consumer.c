@@ -20,23 +20,24 @@ void sendRequestMessage(int myID)
 	mes.timestamp = time(NULL);
 	mes.status = 0;
 	
-	//write(*fd, &mes, sizeof(struct message));
-	mq_send(mq, (const char *) &mes, attr.mq_msgsize, 0);
+	mq_send(mq, (const char *) &mes, sizeof(mes)+1, 0);
 	sem_post(full);
 	pthread_mutex_unlock(&mutex);
 	return;
 }
 
 
-void *ResourceRequester(void *a)
+void *consume(void *a)
 {
 	attr.mq_flags = 0;
 	attr.mq_maxmsg = 50;
 	attr.mq_msgsize = 1000;
 	attr.mq_curmsgs = 0;
-	// message buffer to store incoming and outgoing messages
+	
+	// message queue buffer to store incoming and outgoing messages
 	
 	// open the queue and create it if doesn't exist
+
 	printf("Open mqueue consumer %s\n", MQUEUE);
 	if ((mq = mq_open(MQUEUE, O_RDWR)) == -1)
 	{
@@ -44,18 +45,13 @@ void *ResourceRequester(void *a)
 		exit(EXIT_FAILURE);
 	}
 
-	printf("queue open consumer");
+	printf("queue open consumer\n");
 	usleep(1000);
 
 	bool canConsume = false;
 	int terminate = 3;
 	int myID = *((int *)a);
-	// int fd = open(NAMED_PIPE, O_RDWR);
-	// if (fd < 0)
-	// {
-	// 	printf("Unable to open pipe in consumer...Terminating\n");
-	// 	exit(EXIT_FAILURE);
-	// }
+
 	while(1)
 	{	
 		if(canConsume)
@@ -64,21 +60,20 @@ void *ResourceRequester(void *a)
 			pthread_mutex_lock(&mutex);
 			struct message mes;
 
-			printf("Waiting for message\n");
-			if (mq_receive(mq, (char *) &mes, attr.mq_msgsize, NULL) == -1)
+			//printf("Waiting for message\n");
+			if (mq_receive(mq, (char *) &mes, 8192, NULL) == -1)
 			{
-				perror("receive");
+				perror("receive consumer");
 				exit(EXIT_FAILURE);
 			}
-			printf("Message received\n");
+			//printf("Message received\n");
 				if(terminate<=0)
 					break;	
 			sem_post(empty);
 			if(mes.cid != myID)
 			{
 				sem_wait(empty);
-				//write(fd, &mes, sizeof(struct message));
-				mq_send(mq, (const char *) &mes, attr.mq_msgsize, 10);
+				mq_send(mq, (const char *) &mes, sizeof(mes)+1, 10);
 				sem_post(full);
 				pthread_mutex_unlock(&mutex);
 			}
@@ -96,8 +91,7 @@ void *ResourceRequester(void *a)
 				else
 				{
 					sem_wait(empty);
-					//write(fd, &mes, sizeof(struct message));
-					mq_send(mq, (const char *) &mes, attr.mq_msgsize, 10);
+					mq_send(mq, (const char *) &mes, sizeof(mes)+1, 10);
 					sem_post(full);
 					pthread_mutex_unlock(&mutex);
 				}
@@ -111,7 +105,7 @@ void *ResourceRequester(void *a)
 		}
 		usleep(SLEEP_TIME_MICRO);
 	}
-	printf("\nconsumer %d exiting...\n", myID);
+	printf("\nconsumer %d exiting.\n", myID);
 	//close(fd);
 	return NULL;
 }
@@ -126,24 +120,21 @@ void start_consumer()
 	for(i=0;i<NUM_CONSUMERS;i++)
 	{
 		a[i] = i+1;
-		pthread_create(&consumer_thread[i], NULL, (void *)ResourceRequester, (void *)&a[i]);
+		pthread_create(&consumer_thread[i], NULL, (void *)consume, (void *)&a[i]);
 	}
 	for(i=0;i<NUM_CONSUMERS;i++)
 	{
 		pthread_join(consumer_thread[i], NULL);
 	}
 
-	//int fd = open(NAMED_PIPE, O_RDWR);
 	struct message mes;
 	mes.status = 2;
 
 	sem_wait(empty);
-	mq_send(mq, (const char *) &mes, sizeof(struct message), 10);
-	//write(fd, &mes, sizeof(struct message));
+	mq_send(mq, (const char *) &mes, sizeof(mes), 10);
 	sem_post(full);
 	
-	printf("\nConsumer done consuming...\n");
-	//unlink(NAMED_PIPE);
+	printf("\nConsumer done consuming.\n");
 	mq_close(mq);
 	return;
 
