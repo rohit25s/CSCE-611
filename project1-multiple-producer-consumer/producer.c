@@ -4,16 +4,46 @@
 extern pthread_mutex_t mutex;
 extern sem_t *full;
 extern sem_t *empty;
+extern sem_t *mqAccess;
+
+
+mqd_t mq;
+	// mqueue attributes
+	struct mq_attr attr;
+	
+
+
+
+
 
 void *ResourceGenerator(void *a)
 {
-	int myID = *((int *)a);
-	int fd = open(NAMED_PIPE, O_RDWR);
-	if (fd < 0)
+
+	attr.mq_flags = 0;
+	attr.mq_maxmsg = 100;
+	attr.mq_msgsize = 1000;
+	attr.mq_curmsgs = 0;
+	// signal interrupt
+	int sig;
+	sigset_t signalset;
+	struct sigevent event;
+
+	// open the queue and create it if doesn't exist
+	printf("Open mqueue producer %s\n", MQUEUE);
+	if ((mq = mq_open(MQUEUE, O_RDWR)) == -1)
 	{
-		printf("Unable to open pipe in producer...Terminating\n");
+		perror("open queue producer error");
 		exit(EXIT_FAILURE);
 	}
+	printf("queue opened producer");
+	
+	int myID = *((int *)a);
+	// int fd = open(NAMED_PIPE, O_RDWR);
+	// if (fd < 0)
+	// {
+	// 	printf("Unable to open pipe in producer...Terminating\n");
+	// 	exit(EXIT_FAILURE);
+	// }
 
 	while(1)
 	{	
@@ -21,13 +51,22 @@ void *ResourceGenerator(void *a)
 		pthread_mutex_lock(&mutex);
 		struct message mes;
 		mes.status = 0;
-		read(fd, &mes, sizeof(struct message));
+		//read(fd, &mes, sizeof(struct message));
+		//int n = mq_receive(mq2, (char *) &mes, sizeof(struct message), NULL);
+		printf("Waiting for message\n");
+		if (mq_receive(mq, (char *) &mes, attr.mq_msgsize, NULL) == -1)
+		{
+			perror("receive");
+			exit(EXIT_FAILURE);
+		}
+		printf("Message received\n");
 		sem_post(empty);
 		int q = 0;
 		if(mes.status == 1)
 		{
 			sem_wait(empty);
-			write(fd, &mes, sizeof(struct message));
+			//write(fd, &mes, sizeof(struct message));
+			mq_send(mq, (const char *) &mes, attr.mq_msgsize, 10);
 			sem_post(full);
 			pthread_mutex_unlock(&mutex);
 			
@@ -35,7 +74,8 @@ void *ResourceGenerator(void *a)
 		else if(mes.status == 2)
 		{
 			sem_wait(empty);
-			write(fd, &mes, sizeof(struct message));
+			//write(fd, &mes, sizeof(struct message));
+			mq_send(mq, (const char *) &mes, attr.mq_msgsize, 10);
 			sem_post(full);
 			pthread_mutex_unlock(&mutex);
 			printf("\nProducer %d exiting...\n", myID);
@@ -48,7 +88,8 @@ void *ResourceGenerator(void *a)
 				
 			mes.timestamp = time(NULL);
 			sem_wait(empty);
-			write(fd, &mes, sizeof(struct message));
+			//write(fd, &mes, sizeof(struct message));
+			mq_send(mq, (const char *) &mes, attr.mq_msgsize, 10);
 			printf("[Producer %d] Data produced =%d\n",myID, mes.data);
 			sem_post(full);
 			pthread_mutex_unlock(&mutex);
@@ -60,6 +101,7 @@ void *ResourceGenerator(void *a)
 	
 void start_producer()
 {
+
 	int i=0;
 	int a[NUM_PRODUCERS];
 	pthread_t producer_thread[NUM_PRODUCERS];
@@ -74,5 +116,6 @@ void start_producer()
 		pthread_join(producer_thread[i], NULL);
 	}
 	printf("\nProducer done Producing...\n");
+	mq_close(mq);
 	return;
 }	

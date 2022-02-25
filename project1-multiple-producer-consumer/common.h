@@ -5,9 +5,12 @@
 #define NUM_PRODUCERS 5
 #define NUM_CONSUMERS 10
 #define NAMED_PIPE "./foo"
+#define MQUEUE "/bar2"
+#define MAX_SIZE 1000
 #define SLEEP_TIME_MICRO 50
 #define SEM_FULL "/full"
 #define SEM_EMPTY "/empty"
+#define SEM_MQ_ACCESS "/mqAccess"
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -19,6 +22,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <pthread.h>
+#include <mqueue.h>
 #include "message.h"
 #include <semaphore.h>
 
